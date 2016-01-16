@@ -25,6 +25,7 @@ public:
     static void tanhXforMatrix(MatrixXd&);    //tanh function for matrix (coefficient-wise)
     static void calculateSoftMax(MatrixXd&);    //calculate softmax values for a vector
     static void disturbOrder(vector<MatrixXd*>&, vector<MatrixXd*>&);    //randomising the order of the geiven sequences
+    static void randomInitialize(MatrixXd&, double);    //random Initialize geiven matrix
 
 };
 

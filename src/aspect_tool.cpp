@@ -21,7 +21,8 @@ void AspectTool::getInputData(string file_name, vector<MatrixXd*> &input_datas, 
     }
     
     Word2VecTool word_vec_tool("../res/glove.42B.300d.txt", false);
-    word_vec_tool.initWordIndexDict();    
+    //word_vec_tool.initWordIndexDict();    
+    word_vec_tool.loadWordDict("word_index_dictionary");
     
     string temp_word;
 
@@ -81,7 +82,89 @@ void AspectTool::getInputData(string file_name, vector<MatrixXd*> &input_datas, 
     return;
 }//end 'getInputData'
 
+//calculata f1 score of the predict labels
+double AspectTool::calF1Score(const vector<MatrixXd*> &predict_labels, const vector<MatrixXd*> &true_labels)
+{
+    
+    /*
+     * argument : predict_labels -- the label predict by Sequence Labeler
+     *            true_labels -- the true label 
+     * return : f1 score
+     */
 
+    double predict_num = 0;
+    double true_num = 0;
+    double predict_true_num = 0;
+    
+    for (int input_index = 0; input_index < predict_labels.size(); ++input_index)
+    {
+        MatrixXd *p_predict_label = predict_labels[input_index];    //current predict label
+        MatrixXd *p_true_label = true_labels[input_index];    //current predict label
+
+        int predict_continue_num = 0;    //the num of I after B detected
+        int true_continue_num = 0;    //the num of I after B detected
+
+        for (int col_num = 0; col_num < p_predict_label -> cols(); ++col_num)
+        {
+            
+            //check the predict label
+            if ((*p_predict_label)(1, col_num) == 1)
+            {
+                predict_continue_num = 1;
+                predict_num += 1;
+            }
+            else if ((*p_predict_label)(2, col_num) == 1 && predict_continue_num > 0)
+            {
+                predict_continue_num += 1;
+            }
+            else if ((*p_predict_label)(0, col_num) == 1)
+            {
+                if (predict_continue_num > 0 && predict_continue_num == true_continue_num)
+                {
+                    predict_true_num += 1;
+                }
+                predict_continue_num = 0;
+            }
+
+            //check the true label
+            if ((*p_true_label)(1, col_num) == 1)
+            {
+                true_continue_num = 1;
+                true_num += 1;
+            }
+            else if ((*p_true_label)(2, col_num) == 1 && true_continue_num > 0)
+            {
+                true_continue_num += 1;
+            }
+            else if ((*p_true_label)(0, col_num) == 1)
+            {
+                true_continue_num = 0;
+            }
+
+        }// end 'for'
+
+        //calculate zhe aspect term at the end of sectence
+        if (predict_continue_num > 0 && predict_continue_num == true_continue_num)
+        {
+            ++predict_true_num;
+        }
+    }
+
+    double accuracy_rate = predict_true_num / predict_num;    //calculate accuracy rate
+    double call_back_rete = predict_true_num / true_num;    //calculate call back rate
+    cout << "a_r : " << accuracy_rate<< endl;
+    cout << "c_r : " << call_back_rete << endl; 
+    cout << "predict_true_num : " << predict_true_num << endl;
+    cout << "predict_num : " << predict_num << endl; 
+    cout << "true_num : " << true_num << endl; 
+
+    double f1 = 2 * accuracy_rate * call_back_rete / (accuracy_rate + call_back_rete);    //calculate f1 score : f1 = 2 * a * c / (a + c)
+
+    return f1;
+}
+
+
+/*
 int main()
 {
     AspectTool asp_tool;
@@ -90,3 +173,5 @@ int main()
     asp_tool.getInputData("../res/raw_train", input_datas, input_labels);
     return 0;
 }
+
+*/

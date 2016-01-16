@@ -9,19 +9,35 @@
 #include<cmath>
 
 #include"../include/lstm.h"
-#include"../include/tool.h"
+#include"../include/lstm_tool.h"
 
 using namespace std;
 
 //initialization
-LSTM::LSTM(int input_cell_num, int hidden_cell_num, int state_cell_num, int output_num)
+LSTM::LSTM(int input_cell_num, int hidden_cell_num, int state_cell_num, int output_num) : 
+
+    state_input_gate_weights(state_cell_num + 1, 1),
+    hidden_input_gate_weights(hidden_cell_num + 1, 1),
+    input_input_gate_weights(input_cell_num + 1, 1),
+    state_output_gate_weights(state_cell_num + 1, 1),
+    hidden_output_gate_weights(hidden_cell_num + 1, 1),
+    input_output_gate_weights(input_cell_num + 1, 1),
+    state_forget_gate_weights(state_cell_num + 1, 1),
+    hidden_forget_gate_weights(hidden_cell_num + 1, 1),
+    input_forget_gate_weights(input_cell_num + 1, 1),
+    input_input_tanh_weights(state_cell_num, input_cell_num + 1),
+    hidden_input_tanh_weights(state_cell_num, hidden_cell_num + 1),
+    output_tanh_weights(hidden_cell_num, state_cell_num + 1),
+    output_weights(output_num, hidden_cell_num + 1)
+
 {
     this -> input_cell_num = input_cell_num;
     this -> hidden_cell_num = hidden_cell_num;
     this -> state_cell_num = state_cell_num;
     this -> output_num = output_num;
     
-    //initialize weights randomly from [-0.1, 0.1]
+    /*
+    //initialize weights randomly from [-0.1, 0.1], Pseudo Random
     state_input_gate_weights = MatrixXd::Random(state_cell_num + 1, 1) * 0.1;
     hidden_input_gate_weights = MatrixXd::Random(hidden_cell_num + 1, 1) * 0.1;
     input_input_gate_weights = MatrixXd::Random(input_cell_num + 1, 1) * 0.1;
@@ -31,11 +47,26 @@ LSTM::LSTM(int input_cell_num, int hidden_cell_num, int state_cell_num, int outp
     state_forget_gate_weights = MatrixXd::Random(state_cell_num + 1, 1) * 0.1;
     hidden_forget_gate_weights = MatrixXd::Random(hidden_cell_num + 1, 1) * 0.1;
     input_forget_gate_weights = MatrixXd::Random(input_cell_num + 1, 1) * 0.1;
-
     input_input_tanh_weights = MatrixXd::Random(state_cell_num, input_cell_num + 1) * 0.1;
     hidden_input_tanh_weights = MatrixXd::Random(state_cell_num, hidden_cell_num + 1) * 0.1;
     output_tanh_weights = MatrixXd::Random(hidden_cell_num, state_cell_num + 1) * 0.1;
     output_weights = MatrixXd::Random(output_num, hidden_cell_num + 1) * 0.1;
+    */
+
+    //initialize weigths randomly with gieven precision, True Random
+    LSTMTool::randomInitialize(state_input_gate_weights, 0.1);
+    LSTMTool::randomInitialize(hidden_input_gate_weights, 0.1);
+    LSTMTool::randomInitialize(input_input_gate_weights, 0.1);
+    LSTMTool::randomInitialize(state_output_gate_weights, 0.1);
+    LSTMTool::randomInitialize(hidden_output_gate_weights, 0.1);
+    LSTMTool::randomInitialize(input_output_gate_weights, 0.1);
+    LSTMTool::randomInitialize(state_forget_gate_weights, 0.1);
+    LSTMTool::randomInitialize(hidden_forget_gate_weights, 0.1);
+    LSTMTool::randomInitialize(input_forget_gate_weights, 0.1);
+    LSTMTool::randomInitialize(input_input_tanh_weights, 0.1);
+    LSTMTool::randomInitialize(hidden_input_tanh_weights, 0.1);
+    LSTMTool::randomInitialize(output_tanh_weights, 0.1);
+    LSTMTool::randomInitialize(output_weights, 0.1);
 
     return;
 }
@@ -94,21 +125,21 @@ void LSTM::forwardPass(MatrixXd temp_input_matrix)
     	temp_state_result = (temp_state_trans * state_forget_gate_weights)(0, 0);
     	temp_hidden_result = (temp_hidden_trans * hidden_forget_gate_weights)(0, 0);
     	temp_input_result = (temp_input_trans * input_forget_gate_weights)(0, 0);
-    	double temp_forget_gate_val = Tool::sigmoid(temp_state_result + temp_hidden_result + temp_input_result);
+    	double temp_forget_gate_val = LSTMTool::sigmoid(temp_state_result + temp_hidden_result + temp_input_result);
     	forget_gate_act(0, col_index) = temp_forget_gate_val;
     	
     	//calculate the activation of input gate
     	temp_state_result = (temp_state_trans * state_input_gate_weights)(0, 0);
     	temp_hidden_result = (temp_hidden_trans * hidden_input_gate_weights)(0, 0);
     	temp_input_result = (temp_input_trans * input_input_gate_weights)(0, 0);
-    	double temp_input_gate_val = Tool::sigmoid(temp_state_result + temp_hidden_result + temp_input_result);
+    	double temp_input_gate_val = LSTMTool::sigmoid(temp_state_result + temp_hidden_result + temp_input_result);
     	input_gate_act(0, col_index) = temp_input_gate_val;
 
     	//calculate input tanh layer activation
     	MatrixXd input_input_tanh_result = input_input_tanh_weights * temp_input;
         MatrixXd hidden_input_tanh_result = hidden_input_tanh_weights * temp_hidden_trans.transpose();
         MatrixXd temp_input_tanh_result = input_input_tanh_result + hidden_input_tanh_result;
-        Tool::tanhXforMatrix(temp_input_tanh_result);
+        LSTMTool::tanhXforMatrix(temp_input_tanh_result);
         input_tanh_act.col(col_index) = temp_input_tanh_result;
         
         //calculate new state cells values
@@ -122,12 +153,12 @@ void LSTM::forwardPass(MatrixXd temp_input_matrix)
         temp_state_result = (new_state_trans * state_output_gate_weights)(0, 0);
         temp_hidden_result = (temp_hidden_trans * hidden_output_gate_weights)(0, 0);
         temp_input_result = (temp_input_trans * input_output_gate_weights)(0, 0);
-        double temp_output_gate_val = Tool::sigmoid(temp_state_result + temp_hidden_result + temp_input_result);
+        double temp_output_gate_val = LSTMTool::sigmoid(temp_state_result + temp_hidden_result + temp_input_result);
         output_gate_act(0, col_index) = temp_output_gate_val;
 
         //calculate output tanh layer
         MatrixXd temp_output_tanh_result = output_tanh_weights * new_state_trans.transpose();
-        Tool::tanhXforMatrix(temp_output_tanh_result);
+        LSTMTool::tanhXforMatrix(temp_output_tanh_result);
         output_tanh_act.col(col_index) = temp_output_tanh_result;
 
         //calculate new hidden cells values
@@ -139,7 +170,7 @@ void LSTM::forwardPass(MatrixXd temp_input_matrix)
         new_hidden_bias.block(0, 0, hidden_cell_num, 1) = new_hidden_result;
         new_hidden_bias(hidden_cell_num, 0) = 1;    //add bias
         MatrixXd temp_output_val = output_weights * new_hidden_bias;    //(k, h + 1) * (h + 1, 1) = (k, 1)
-        Tool::calculateSoftMax(temp_output_val);
+        LSTMTool::calculateSoftMax(temp_output_val);
         output_act.col(col_index) = temp_output_val;
 
     }//end 'for'
@@ -296,7 +327,7 @@ void LSTM::checkGradient()
     //real weight
     MatrixXd true_weight = output_tanh_weights;
 
-    double epsilon = 1e-7;    //EPSILON
+    double epsilon = 1e-4;    //EPSILON
 
     //initialize a random input data and label
     int sequence_length = 100;
@@ -364,11 +395,14 @@ void LSTM::stochasticGradientDescent(vector<MatrixXd*> input_datas, vector<Matri
     //total number of input datas
     int input_num = input_datas.size();
 
+    for (int i = 0; i < 1; ++i)
+    {
+
     for (int input_index = 0; input_index < input_num; ++input_index)
     {
         ++input_count;
         //randomising the order of input datas and labels
-        Tool::disturbOrder(input_datas, input_labels);
+        LSTMTool::disturbOrder(input_datas, input_labels);
         
         MatrixXd now_input_maxtrix = *(input_datas[input_index]);    //current input data
         MatrixXd now_label_maxtrix = *(input_labels[input_index]);    //current input label
@@ -470,14 +504,75 @@ void LSTM::stochasticGradientDescent(vector<MatrixXd*> input_datas, vector<Matri
         output_tanh_weights -= output_tanh_weights_derivative;
         output_weights -= output_weights_derivative;
         
-
+        double ave_error = calculateError(now_label_maxtrix) / sequence_length;
+        if (ave_error != ave_error)
+        {
+            cout << "sequence_length " << sequence_length << endl;
+            cout << "error " << calculateError(now_label_maxtrix) << endl;
+            cout << "state_input_gate_weights" << state_input_gate_weights << endl;
+            cout << "hidden_input_gate_weights" << hidden_input_gate_weights << endl;
+            cout << "input_input_gate_weights" << input_input_gate_weights << endl;
+            cout << "state_output_gate_weights" << state_output_gate_weights << endl;
+            cout << "hidden_output_gate_weights" << hidden_output_gate_weights << endl;
+            cout << "input_output_gate_weights" << input_output_gate_weights << endl;
+            cout << "state_forget_gate_weights" << state_forget_gate_weights << endl;
+            cout << "hidden_forget_gate_weights" << hidden_forget_gate_weights << endl;
+            cout << "input_forget_gate_weights" << input_forget_gate_weights << endl;
+            cout << "input_input_tanh_weights" << input_input_tanh_weights << endl;
+            cout << "hidden_input_tanh_weights" << hidden_input_tanh_weights << endl;
+            cout << "output_tanh_weights" << output_tanh_weights << endl;
+            cout << "output_weights" << output_weights << endl;
+            cout << "input_datas" << now_input_maxtrix << endl;
+            cout << "input_label" << now_label_maxtrix << endl;
+            return;
+        }
+        cout << calculateError(now_label_maxtrix) / sequence_length << endl;
     }//end 'for' of input datas
     
-    
+    }//end 'for' of pass num
     return;
 }
 
+//predict the output of the geiven input datas
+vector<MatrixXd*> LSTM::predict(vector<MatrixXd*> input_datas)
+{
+    /*
+     * argument : input_datas -- the data waiting to be predict, every element is a matrix pointer (I * T)
+     * return : predict_labels -- the label of input datas predicted by LSTM, every element is a matrix pointer (K * T)
+     */
 
+    vector<MatrixXd*> predict_labels;    //vector to store the predict labels
+    int input_num = input_datas.size();    //the number of input datas
+
+    //for every input predict the label
+    for (int i = 0; i < input_num; ++i)
+    {
+        MatrixXd temp_input_data = *(input_datas[i]);
+        int sequence_length = temp_input_data.cols();
+
+        forwardPass(temp_input_data);    //forward pass two calculte the value of every node
+
+        MatrixXd *temp_predict_label = new MatrixXd(output_num, sequence_length);
+        *temp_predict_label = MatrixXd::Zero(output_num, sequence_length);
+
+        for (int col_num = 0; col_num < sequence_length; ++col_num)
+        {
+            int temp_row = 0;
+            int temp_col = 0;
+            int *p_temp_row = &temp_row;
+            int *p_temp_col = &temp_col;
+            output_act.col(col_num).maxCoeff(p_temp_row, p_temp_col);
+            (*temp_predict_label)(*p_temp_row, col_num) = 1;
+        }
+
+        predict_labels.push_back(temp_predict_label);
+    }
+
+    return predict_labels;
+}
+
+
+/*
 int main()
 {
     LSTM lstm(100, 80, 120, 3);
@@ -493,6 +588,6 @@ int main()
     }
     lstm.forwardPass(input_data);
     lstm.backwardPass(label);
-    */
     return 0;
 }
+*/

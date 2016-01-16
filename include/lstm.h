@@ -68,16 +68,14 @@ private:
 public:
 
     LSTM(int input_cell_num, int hidden_cell_num, int state_cell_num, int output_num);    //initialization
-    double sigmoid(double);    //sigmoid function
-    double tanhX(double);    //tanh function 
-    void tanhXforMatrix(MatrixXd&);    //tanh function for matrix (coefficient-wise)
-    void calculateSoftMax(MatrixXd&);    //calculate softmax values for a vector
     void forwardPass(MatrixXd);    //forward psss geiven the input data (matrix)
     void backwardPass(MatrixXd&);    //calculate errors back through the network
     double calculateError(MatrixXd&);    //calculate the error of geiven input
     void checkGradient();    //check the derivative is calculated correct or not
-    void stochasticGradientDescent(vector<MatrixXd*>,vector<MatrixXd*>, double, double);    //SGD with a momentum
-    
+    void stochasticGradientDescent(vector<MatrixXd*>, vector<MatrixXd*>, double, double);    //SGD with a momentum
+    vector<MatrixXd*> predict(vector<MatrixXd*>);    //predict the output of the geiven input datas
+    void siveModel();    //save current model into a file
+    void loadModel();    //load a model from geiven file
 };
 
 #endif
