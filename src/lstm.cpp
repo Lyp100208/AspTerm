@@ -7,13 +7,28 @@
 
 #include<iostream>
 #include<cmath>
+#include<fstream>
 
 #include"../include/lstm.h"
 #include"../include/lstm_tool.h"
 
 using namespace std;
 
-//initialization
+//default initialization
+LSTM::LSTM()
+{
+    return;
+}
+
+//initialization with model stored in file
+LSTM::LSTM(string model_file)
+{
+    loadModel(model_file);
+    return;
+}
+
+
+//initialization with layers cell number
 LSTM::LSTM(int input_cell_num, int hidden_cell_num, int state_cell_num, int output_num) : 
 
     state_input_gate_weights(state_cell_num + 1, 1),
@@ -571,12 +586,168 @@ vector<MatrixXd*> LSTM::predict(vector<MatrixXd*> input_datas)
     return predict_labels;
 }
 
+//save the model into a file
+void LSTM::saveModel(string file_name)
+{
+    /*
+     * argument : file_name -- the file to store the model
+     * note : the first line of the file will store various nodes number with the Declaration order.
+     *        the weights of model will be then writen into the file with the Declaration order.
+     */
+    
+    ofstream of_model(file_name.c_str());
+
+    char block = ' ';
+    of_model << input_cell_num << block << hidden_cell_num << block << state_cell_num << block << output_num << endl;
+    of_model << state_input_gate_weights << endl;
+    of_model << hidden_input_gate_weights << endl;
+    of_model << input_input_gate_weights << endl;
+    of_model << state_output_gate_weights << endl;
+    of_model << hidden_output_gate_weights << endl;
+    of_model << input_output_gate_weights << endl;
+    of_model << state_forget_gate_weights << endl;
+    of_model << hidden_forget_gate_weights << endl;
+    of_model << input_forget_gate_weights << endl;
+    of_model << input_input_tanh_weights << endl;
+    of_model << hidden_input_tanh_weights << endl;
+    of_model << output_tanh_weights << endl;
+    of_model << output_weights << endl;
+    
+    of_model.close();
+    return;
+}
+
+//load model from geiven file
+void LSTM::loadModel(string file_name)
+{
+    /*
+     * argument : file_name -- the file saves the weights of model
+     * note : the first line of the file will store various nodes number with the Declaration order.
+     *        the weights of model will be then writen into the file with the Declaration order.
+     */
+    
+    ifstream if_model(file_name.c_str());
+
+    //load various layer cell numner with the declaration order
+    if_model >> input_cell_num >> hidden_cell_num >> state_cell_num >> output_num;
+
+    //resize the weights matrixes
+    state_input_gate_weights.resize(state_cell_num + 1, 1);
+    hidden_input_gate_weights.resize(hidden_cell_num + 1, 1);
+    input_input_gate_weights.resize(input_cell_num + 1, 1);
+    state_output_gate_weights.resize(state_cell_num + 1, 1);
+    hidden_output_gate_weights.resize(hidden_cell_num + 1, 1);
+    input_output_gate_weights.resize(input_cell_num + 1, 1);
+    state_forget_gate_weights.resize(state_cell_num + 1, 1);
+    hidden_forget_gate_weights.resize(hidden_cell_num + 1, 1);
+    input_forget_gate_weights.resize(input_cell_num + 1, 1);
+    
+    input_input_tanh_weights.resize(state_cell_num, input_cell_num + 1);
+    hidden_input_tanh_weights.resize(state_cell_num, hidden_cell_num + 1);
+    output_tanh_weights.resize(hidden_cell_num, state_cell_num + 1);
+    output_weights.resize(output_num, hidden_cell_num + 1);
+    
+    //load state_input_gate_weights
+    for (int i = 0; i < state_cell_num + 1; ++i)
+    {
+        if_model >> state_input_gate_weights(i, 0);
+    }
+    
+    //load hidden_input_gate_weights
+    for (int i = 0; i < hidden_cell_num + 1; ++i)
+    {
+        if_model >> hidden_input_gate_weights(i, 0);
+    }
+
+    //load input_input_gate_weights
+    for (int i = 0; i < input_cell_num + 1; ++i)
+    {
+        if_model >> input_input_gate_weights(i, 0);
+    }
+
+    //load state_output_gate_weights
+    for (int i = 0; i < state_cell_num + 1; ++i)
+    {
+        if_model >> state_output_gate_weights(i, 0);
+    }
+
+    //load hidden_output_gate_weights
+    for (int i = 0; i < hidden_cell_num + 1; ++i)
+    {
+        if_model >> hidden_output_gate_weights(i, 0);
+    }
+
+    //load input_output_gate_weights
+    for (int i = 0; i < input_cell_num + 1; ++i)
+    {
+        if_model >> input_output_gate_weights(i, 0);
+    }
+
+    //load state_forget_gate_weights
+    for (int i = 0; i < state_cell_num + 1; ++i)
+    {
+        if_model >> state_forget_gate_weights(i, 0);
+    }
+
+    //load hidden_forget_gate_weights
+    for (int i = 0; i < hidden_cell_num + 1; ++i)
+    {
+        if_model >> hidden_forget_gate_weights(i, 0);
+    }
+
+    //load input_forget_gate_weights
+    for (int i = 0; i < input_cell_num + 1; ++i)
+    {
+        if_model >> input_forget_gate_weights(i, 0);
+    }
+
+    //load input_input_tanh_weights
+    for (int row_index = 0; row_index < state_cell_num; ++row_index)
+    {
+        for (int col_index = 0; col_index < input_cell_num + 1; ++col_index)
+        {
+            if_model >> input_input_tanh_weights(row_index, col_index);
+        }
+    }
+
+    //load hidden_input_tanh_weights
+    for (int row_index = 0; row_index < state_cell_num; ++row_index)
+    {
+        for (int col_index = 0; col_index < hidden_cell_num + 1; ++col_index)
+        {
+            if_model >> hidden_input_tanh_weights(row_index, col_index);
+        }
+    }
+
+    //load output_tanh_weights
+    for (int row_index = 0; row_index < hidden_cell_num; ++row_index)
+    {
+        for (int col_index = 0; col_index < state_cell_num + 1; ++col_index)
+        {
+            if_model >> output_tanh_weights(row_index, col_index);
+        }
+    }
+
+    //load output_weights
+    for (int row_index = 0; row_index < output_num; ++row_index)
+    {
+        for (int col_index = 0; col_index < hidden_cell_num + 1; ++ col_index)
+        {
+            if_model >> output_weights(row_index, col_index);
+        }
+    }
+
+    if_model.close();
+
+    return;
+}
 
 /*
+
 int main()
 {
     LSTM lstm(100, 80, 120, 3);
-    lstm.checkGradient();
+    //lstm.checkGradient();
     /*
     MatrixXd input_data = MatrixXd::Random(100, 10);
     MatrixXd label = MatrixXd::Zero(3, 10);
@@ -588,6 +759,11 @@ int main()
     }
     lstm.forwardPass(input_data);
     lstm.backwardPass(label);
+
+
+    lstm.loadModel("__Model");
+    lstm.saveModel("__Model2");
     return 0;
 }
+
 */

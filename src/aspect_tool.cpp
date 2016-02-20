@@ -7,6 +7,8 @@
 
 #include"../include/aspect_tool.h"
 #include"../include/word2vec_tool.h"
+#include"../include/string_tool.h"
+#include"../include/lstm.h"
 #include<fstream>
 
 void AspectTool::getInputData(string file_name, vector<MatrixXd*> &input_datas, vector<MatrixXd*> &input_labels)
@@ -160,18 +162,78 @@ double AspectTool::calF1Score(const vector<MatrixXd*> &predict_labels, const vec
 
     double f1 = 2 * accuracy_rate * call_back_rete / (accuracy_rate + call_back_rete);    //calculate f1 score : f1 = 2 * a * c / (a + c)
 
+    cout << "f1 : " << f1 << endl;
     return f1;
 }
 
+//input from console and output the result predict by the model
+void AspectTool::realTest(string model_file)
+{
+    //initialize word vector tool
+    Word2VecTool word_vec_tool("../res/glove.42B.300d.txt", false);
+    //word_vec_tool.initWordIndexDict();    
+    word_vec_tool.loadWordDict("word_index_dictionary");
+    
+    cout << "Please input the test sectence : " << endl;
+    string sentence;
+    getline(cin, sentence);
 
-/*
+cout << sentence << endl;
+    StringTool st;
+    vector<string> word_token = st.tokenize(sentence);
+    
+    MatrixXd *p_input_data = new MatrixXd(word_vec_tool.getVectorLength(), word_token.size());
+    for (int i = 0; i < word_token.size(); ++i)
+    {
+        MatrixXd temp_matrix(word_vec_tool.getVectorLength(), 1);
+        word_vec_tool.getWrodVect(word_token[i], temp_matrix);
+        p_input_data -> col(i) = temp_matrix;
+    }
+
+    vector<MatrixXd*> input_datas;
+    input_datas.push_back(p_input_data);
+
+//cout << *p_input_data << endl;
+    LSTM lstm(model_file);
+
+    vector<MatrixXd*> predict_labels = lstm.predict(input_datas);
+
+    MatrixXd temp_label = *(predict_labels[0]);
+
+cout << temp_label << endl;
+    string aspect_term = "";
+    for (int i = 0; i < temp_label.cols(); ++i)
+    {
+        if (temp_label(1, i) == 1)
+        {
+            aspect_term = aspect_term + " " + word_token[i];
+        }
+        else if (temp_label(2, i) == 1 && aspect_term.size() > 0)
+        {
+            aspect_term = aspect_term + " " + word_token[i];
+        }
+        else if (temp_label(0, i) == 1)
+        {
+            if (aspect_term.size() > 0)
+            {
+                cout << "Aspect Term : " << aspect_term << endl;
+            }
+            aspect_term = "";
+        }
+    }
+
+    if (aspect_term.size() > 0)
+    {
+        cout << "Aspect Term : " << aspect_term << endl;
+    }
+
+    return;
+}
+
 int main()
 {
     AspectTool asp_tool;
-    vector<MatrixXd*> input_datas;
-    vector<MatrixXd*> input_labels;
-    asp_tool.getInputData("../res/raw_train", input_datas, input_labels);
+    asp_tool.realTest("320_350_0.001_9_m");
     return 0;
 }
 
-*/

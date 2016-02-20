@@ -12,7 +12,7 @@ void StringTool::split(const string &str, string delim, vector<string> &result)
 {
     /*
      * argument : str -- the original string
-     *            delim -- the separator used to split the string 
+     *            delim -- the separator set used to split the string 
      *            result -- result vector to store the substring splited by delim
      */
     
@@ -20,7 +20,7 @@ void StringTool::split(const string &str, string delim, vector<string> &result)
     int current_index = 0;    //the current pose of the delim
 
     //find all delim in the string
-    while ( (current_index = str.find(delim, last_index)) != string::npos)
+    while ( (current_index = str.find_first_of(delim, last_index)) != string::npos)
     {
         string temp_str = str.substr(last_index, current_index - last_index);
         result.push_back(temp_str);
@@ -93,3 +93,57 @@ int StringTool::calEditDistence(const string &word_1, const string &word_2)
 
     return result[word_1_length];
 }
+
+//tokenize the sentence into a vector with the geiven delimitation
+vector<string> StringTool::tokenize(const string sentence, string delimitation)
+{
+    /*
+     * argument : sentence -- the sentence to be tokenized
+     *            delimitation -- candidate char used to split and tokenize the sentence
+     *                            the default of the delimitation is " ,.?!()[]{}<>~#&*`\'\";"
+     * return : the vector where tokenized words stored 
+     */ 
+    vector<string> result;
+    
+    int last_index = 0;    //the last pose of the delimitation
+    int current_index = 0;    //the current pose of the delimitation
+
+    //find all delimitation in the string
+    while ( (current_index = sentence.find_first_of(delimitation, last_index)) != string::npos)
+    {
+        string temp_str = sentence.substr(last_index, current_index - last_index);
+        if (temp_str.size() > 0)
+        {
+            result.push_back(temp_str);
+        }
+        string current_delim = "";
+        current_delim.push_back(sentence[current_index]);
+        if (current_delim != " ")
+        {
+            result.push_back(current_delim);
+        }
+        last_index = current_index + 1;
+    }
+
+    //the string ends with delimitation or not
+    if (last_index != sentence.size())
+    {
+        string temp_str = sentence.substr(last_index);    //substr form last_index to the end
+        result.push_back(temp_str);
+    }
+
+    return result;
+}
+
+/*
+int main()
+{
+    StringTool st;
+    vector<string> result = st.tokenize("i love you, my love! and i'm not good love-man. and...you're my \"good-one\".");
+    for (int i = 0 ; i < result.size(); ++i)
+    {
+        cout << result[i] << endl;
+    }
+    return 0;
+}
+*/
