@@ -67,15 +67,42 @@ private:
 
 public:
 
-    LSTM(int input_cell_num, int hidden_cell_num, int state_cell_num, int output_num);    //initialization
+    LSTM();    //default initialization
+    LSTM(string model_file);    //initialization with model stored in file
+    LSTM(int input_cell_num, int hidden_cell_num, int state_cell_num, int output_num);    //initialization with layers cell number
     void forwardPass(MatrixXd);    //forward psss geiven the input data (matrix)
+    void calculateSoftMax(MatrixXd);    //calculate SoftMax for the output layer
     void backwardPass(MatrixXd&);    //calculate errors back through the network
     double calculateError(MatrixXd&);    //calculate the error of geiven input
     void checkGradient();    //check the derivative is calculated correct or not
+    void updateWeightsWithOneSentence(
+                                            MatrixXd &now_input_maxtrix, MatrixXd &now_label_maxtrix,
+                                            double learning_rate, double momentum_rate,
+                                            MatrixXd &state_input_gate_weights_derivative,
+                                            MatrixXd &hidden_input_gate_weights_derivative,
+                                            MatrixXd &input_input_gate_weights_derivative,
+                                            MatrixXd &state_output_gate_weights_derivative,
+                                            MatrixXd &hidden_output_gate_weights_derivative,
+                                            MatrixXd &input_output_gate_weights_derivative,
+                                            MatrixXd &state_forget_gate_weights_derivative,
+                                            MatrixXd &hidden_forget_gate_weights_derivative,
+                                            MatrixXd &input_forget_gate_weights_derivative,
+                                            MatrixXd &input_input_tanh_weights_derivative,
+                                            MatrixXd &hidden_input_tanh_weights_derivative,
+                                            MatrixXd &output_tanh_weights_derivative,
+                                            MatrixXd &output_weights_derivative
+                                           );    //update network weights with one sentence
     void stochasticGradientDescent(vector<MatrixXd*>, vector<MatrixXd*>, double, double);    //SGD with a momentum
-    vector<MatrixXd*> predict(vector<MatrixXd*>);    //predict the output of the geiven input datas
-    void siveModel();    //save current model into a file
-    void loadModel();    //load a model from geiven file
+    vector<MatrixXd*> predict(vector<MatrixXd*>);    //predict the label of the geiven input datas
+    void saveModel(string file_name);    //save current model into a file
+    void loadModel(string file_name);    //load a model from geiven file
+
+    //some getter function
+    MatrixXd getOutputValue();    //get the matrix of output_act
+    int getInputCellNum();    //get the value of input_cell_num
+    int getStateCellNum();    //get the value of state_cell_num
+    int getHiddenCellNum();    //get the value of hidden_cell_num
+    int getOutputNum();    //get the value of output_num
 };
 
 #endif

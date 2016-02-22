@@ -94,6 +94,7 @@ void LSTM::forwardPass(MatrixXd temp_input_matrix)
      */
     
     int sequence_length = temp_input_matrix.cols();    //sequence length
+    block_num = sequence_length;    //record in variable 'block_num'
 
     //initialize memory matrix with zero
     state_values = MatrixXd::Zero(state_cell_num, sequence_length);
@@ -185,18 +186,44 @@ void LSTM::forwardPass(MatrixXd temp_input_matrix)
         new_hidden_bias.block(0, 0, hidden_cell_num, 1) = new_hidden_result;
         new_hidden_bias(hidden_cell_num, 0) = 1;    //add bias
         MatrixXd temp_output_val = output_weights * new_hidden_bias;    //(k, h + 1) * (h + 1, 1) = (k, 1)
-        LSTMTool::calculateSoftMax(temp_output_val);
+        //LSTMTool::calculateSoftMax(temp_output_val);
         output_act.col(col_index) = temp_output_val;
 
     }//end 'for'
     return;
 }//end 'forwardPass'
 
+//calculate SoftMax for the output layer
+void LSTM::calculateSoftMax(MatrixXd output_values)
+{
+    /*
+     * note : this function should be invoked after forwardPass()
+     * argument : output_values -- the output layer values needed to calculate SoftMax (K * T)
+     * function : calculate SoftMax for the output layer
+     */
+    for (int t = 0; t < output_values.cols(); ++t)
+    {
+        double sum = 0;
+        for (int row_num = 0; row_num < output_values.rows(); ++row_num)
+        {
+            output_values(row_num, t) = exp(output_values(row_num, t));
+            sum += output_values(row_num, t);
+        }
+        for (int row_num = 0; row_num < output_values.rows(); ++row_num)
+        {
+            output_values(row_num, t) = output_values(row_num, t) / sum;
+        }
+    }
+    
+    output_act = output_values;
+    return;
+}
+
 //calculate errors back through the network
 void LSTM::backwardPass(MatrixXd &label)
 {
     /*
-     * note : this function should be invoked after forwardPass()
+     * note : this function should be invoked after forwardPass() and calculateSoftMax()
      * argument : label -- the labels of input datas (K * T)
      * function : calculate errors back through the network
      */
@@ -379,12 +406,143 @@ void LSTM::checkGradient()
     return;
 }
 
+//update network weights with one sentence
+void LSTM::updateWeightsWithOneSentence(
+                                        MatrixXd &now_input_maxtrix, MatrixXd &now_label_maxtrix,
+                                        double learning_rate, double momentum_rate,
+                                        MatrixXd &state_input_gate_weights_derivative,
+                                        MatrixXd &hidden_input_gate_weights_derivative,
+                                        MatrixXd &input_input_gate_weights_derivative,
+                                        MatrixXd &state_output_gate_weights_derivative,
+                                        MatrixXd &hidden_output_gate_weights_derivative,
+                                        MatrixXd &input_output_gate_weights_derivative,
+                                        MatrixXd &state_forget_gate_weights_derivative,
+                                        MatrixXd &hidden_forget_gate_weights_derivative,
+                                        MatrixXd &input_forget_gate_weights_derivative,
+                                        MatrixXd &input_input_tanh_weights_derivative,
+                                        MatrixXd &hidden_input_tanh_weights_derivative,
+                                        MatrixXd &output_tanh_weights_derivative,
+                                        MatrixXd &output_weights_derivative
+                                       )
+{
+    /*
+     * note : this function is designed for Bidirectional Networks, it is terrible, so if don't use Bi-LSTM, please neglect this fuction
+     * argument : now_input_maxtrix -- current input data (I * T)
+     *            now_label_maxtrix -- current label data (K * T)
+     *            learning_rate -- initial learning rate
+     *            momentum_rate -- the parameter of momentum
+     *            output_values -- 
+     *            other matrixes -- record last derivative for momentum
+     */
+
+        int sequence_length = now_input_maxtrix.cols();    //the length of current sequence
+
+        //calculate zhe momentum term
+        state_input_gate_weights_derivative *= momentum_rate;
+        hidden_input_gate_weights_derivative *= momentum_rate;
+        input_input_gate_weights_derivative *= momentum_rate;
+        state_output_gate_weights_derivative *= momentum_rate;
+        hidden_output_gate_weights_derivative *= momentum_rate;
+        input_output_gate_weights_derivative *= momentum_rate;
+        state_forget_gate_weights_derivative *= momentum_rate;
+        hidden_forget_gate_weights_derivative *= momentum_rate;
+        input_forget_gate_weights_derivative *= momentum_rate;
+
+        input_input_tanh_weights_derivative *= momentum_rate;
+        hidden_input_tanh_weights_derivative *= momentum_rate;
+        output_tanh_weights_derivative *= momentum_rate;
+        output_weights_derivative *= momentum_rate;
+
+        //calculate derivative with BPTT
+        for (int t = 0; t < sequence_length; ++t)
+        {
+            //define input, state and hidden vector
+            MatrixXd input_now(input_cell_num + 1, 1);
+            MatrixXd hidden_previous(hidden_cell_num + 1, 1);
+            MatrixXd hidden_now(hidden_cell_num + 1, 1);
+            MatrixXd state_previous(state_cell_num + 1, 1);
+            MatrixXd state_now(state_cell_num + 1, 1);
+
+            //initialize input, state and hidden vector and add bias for them
+            input_now.block(0, 0, input_cell_num, 1) = now_input_maxtrix.col(t);
+            input_now(input_cell_num, 0) = 1;
+            hidden_now.block(0, 0, hidden_cell_num, 1) = hidden_values.col(t);
+            hidden_now(hidden_cell_num, 0) = 1;
+            state_now.block(0, 0, state_cell_num, 1) = state_values.col(t);
+            state_now(state_cell_num, 0) = 1;
+            
+            if (t > 0)
+            {
+                hidden_previous.block(0, 0, hidden_cell_num, 1) = hidden_values.col(t - 1);
+                state_previous.block(0, 0, state_cell_num, 1) = state_values.col(t - 1);
+            }
+            else
+            {
+                hidden_previous.block(0, 0, hidden_cell_num, 1) = MatrixXd::Zero(hidden_cell_num, 1);
+                state_previous.block(0, 0, state_cell_num, 1) = MatrixXd::Zero(state_cell_num, 1);
+            }
+            
+            hidden_previous(hidden_cell_num, 0) = 1;
+            state_previous(state_cell_num, 0) = 1;
+
+            //updata forget gate weights derivative (for input, hidden and state layer)
+            state_forget_gate_weights_derivative += error_forget_gate(0, t) * state_previous * learning_rate;
+            hidden_forget_gate_weights_derivative += error_forget_gate(0, t) * hidden_previous * learning_rate;
+            input_forget_gate_weights_derivative +=  error_forget_gate(0, t) * input_now * learning_rate;
+
+            //updata input gate weights derivative (for input, hidden and state layer)
+            state_input_gate_weights_derivative += error_input_gate(0, t) * state_previous * learning_rate;
+            hidden_input_gate_weights_derivative += error_input_gate(0, t) * hidden_previous * learning_rate;
+            input_input_gate_weights_derivative += error_input_gate(0, t) * input_now * learning_rate;
+
+            //updata output gate weights derivative (for input, hidden and state layer)
+            hidden_output_gate_weights_derivative += error_output_gate(0, t) * hidden_previous * learning_rate;
+            state_output_gate_weights_derivative += error_output_gate(0, t) * state_now * learning_rate;
+            input_output_gate_weights_derivative += error_output_gate(0, t) * input_now * learning_rate;
+
+            //updata input tanh layer weights derivative w.r.t. input layer 
+            input_input_tanh_weights_derivative += error_input_tanh.col(t) * input_now.transpose() * learning_rate;
+
+            //updata input tanh layer weights derivative w.r.t. hidden layer 
+            hidden_input_tanh_weights_derivative += error_input_tanh.col(t) * hidden_previous.transpose() * learning_rate;
+            
+            //updata output tanh layer weights derivative
+            output_tanh_weights_derivative += error_output_tanh.col(t) * state_now.transpose() * learning_rate;
+
+            //updata output layer weights derivative (softmax layer)
+            output_weights_derivative += error_output.col(t) * hidden_now.transpose() * learning_rate;
+        }//end 'for' of sequence
+
+        //updata weights
+        state_input_gate_weights -= state_input_gate_weights_derivative;
+        hidden_input_gate_weights -= hidden_input_gate_weights_derivative;
+        input_input_gate_weights -= input_input_gate_weights_derivative;
+        state_output_gate_weights -= state_output_gate_weights_derivative;
+        hidden_output_gate_weights -= hidden_output_gate_weights_derivative;
+        input_output_gate_weights -= input_output_gate_weights_derivative;
+        state_forget_gate_weights -= state_forget_gate_weights_derivative;
+        hidden_forget_gate_weights -= hidden_forget_gate_weights_derivative;
+        input_forget_gate_weights -= input_forget_gate_weights_derivative;
+
+        input_input_tanh_weights -= input_input_tanh_weights_derivative;
+        hidden_input_tanh_weights -= hidden_input_tanh_weights_derivative;
+        output_tanh_weights -= output_tanh_weights_derivative;
+        output_weights -= output_weights_derivative;
+        
+        double ave_error = calculateError(now_label_maxtrix) / sequence_length;
+        cout << ave_error << endl;
+    
+    return;
+}
+
+
 //SGD with a momentum
 void LSTM::stochasticGradientDescent(vector<MatrixXd*> input_datas, vector<MatrixXd*> input_labels, double learning_rate, double momentum_rate = 0)
 {
     /*
      * note : the stopping criteria is 
      * argument : input_datas -- a vector of input data, every element is a I * T matrix
+     *            input_labels -- a vector of input labels, every element is a K * T matrix
      *            learning_rate -- initial learning rate
      *            momentum_rate -- the parameter of momentum
      */
@@ -413,16 +571,18 @@ void LSTM::stochasticGradientDescent(vector<MatrixXd*> input_datas, vector<Matri
     for (int i = 0; i < 1; ++i)
     {
 
+    //randomising the order of input datas and labels
+    LSTMTool::disturbOrder(input_datas, input_labels);
+
     for (int input_index = 0; input_index < input_num; ++input_index)
     {
         ++input_count;
-        //randomising the order of input datas and labels
-        LSTMTool::disturbOrder(input_datas, input_labels);
         
         MatrixXd now_input_maxtrix = *(input_datas[input_index]);    //current input data
         MatrixXd now_label_maxtrix = *(input_labels[input_index]);    //current input label
         
         forwardPass(now_input_maxtrix);
+        calculateSoftMax(output_act);
         backwardPass(now_label_maxtrix);
 
         int sequence_length = now_input_maxtrix.cols();    //the length of current sequence
@@ -520,28 +680,8 @@ void LSTM::stochasticGradientDescent(vector<MatrixXd*> input_datas, vector<Matri
         output_weights -= output_weights_derivative;
         
         double ave_error = calculateError(now_label_maxtrix) / sequence_length;
-        if (ave_error != ave_error)
-        {
-            cout << "sequence_length " << sequence_length << endl;
-            cout << "error " << calculateError(now_label_maxtrix) << endl;
-            cout << "state_input_gate_weights" << state_input_gate_weights << endl;
-            cout << "hidden_input_gate_weights" << hidden_input_gate_weights << endl;
-            cout << "input_input_gate_weights" << input_input_gate_weights << endl;
-            cout << "state_output_gate_weights" << state_output_gate_weights << endl;
-            cout << "hidden_output_gate_weights" << hidden_output_gate_weights << endl;
-            cout << "input_output_gate_weights" << input_output_gate_weights << endl;
-            cout << "state_forget_gate_weights" << state_forget_gate_weights << endl;
-            cout << "hidden_forget_gate_weights" << hidden_forget_gate_weights << endl;
-            cout << "input_forget_gate_weights" << input_forget_gate_weights << endl;
-            cout << "input_input_tanh_weights" << input_input_tanh_weights << endl;
-            cout << "hidden_input_tanh_weights" << hidden_input_tanh_weights << endl;
-            cout << "output_tanh_weights" << output_tanh_weights << endl;
-            cout << "output_weights" << output_weights << endl;
-            cout << "input_datas" << now_input_maxtrix << endl;
-            cout << "input_label" << now_label_maxtrix << endl;
-            return;
-        }
-        cout << calculateError(now_label_maxtrix) / sequence_length << endl;
+        cout << ave_error << endl;
+
     }//end 'for' of input datas
     
     }//end 'for' of pass num
@@ -566,6 +706,7 @@ vector<MatrixXd*> LSTM::predict(vector<MatrixXd*> input_datas)
         int sequence_length = temp_input_data.cols();
 
         forwardPass(temp_input_data);    //forward pass two calculte the value of every node
+        calculateSoftMax(output_act);
 
         MatrixXd *temp_predict_label = new MatrixXd(output_num, sequence_length);
         *temp_predict_label = MatrixXd::Zero(output_num, sequence_length);
@@ -742,8 +883,37 @@ void LSTM::loadModel(string file_name)
     return;
 }
 
-/*
+//get the matrix of output_act
+MatrixXd LSTM::getOutputValue()
+{
+    return output_act;
+}
 
+//get the value of input_cell_num
+int LSTM::getInputCellNum()
+{
+    return input_cell_num;
+}
+
+//get the value of state_cell_num
+int LSTM::getStateCellNum()
+{
+    return state_cell_num;
+}
+
+//get the value of hidden_cell_num
+int LSTM::getHiddenCellNum()
+{
+    return hidden_cell_num;
+}
+
+//get the value of output_num
+int LSTM::getOutputNum()
+{
+    return output_num;
+}
+
+/*
 int main()
 {
     LSTM lstm(100, 80, 120, 3);
