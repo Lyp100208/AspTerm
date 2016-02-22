@@ -230,10 +230,11 @@ cout << temp_label << endl;
     return;
 }
 
+/*
 int main()
 {
     AspectTool asp_tool;
     asp_tool.realTest("320_350_0.001_9_m");
     return 0;
 }
-
+*/

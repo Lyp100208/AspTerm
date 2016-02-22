@@ -126,3 +126,21 @@ void LSTMTool::randomInitialize(MatrixXd &matrix, double precision)
     
     return;
 }
+
+//recerse the matrix in the row direction
+void LSTMTool::reverseMarix(MatrixXd &temp_matrix)
+{
+    //reverse the matrix
+    int forward_point = 0;
+    int backward_point = temp_matrix.cols() - 1;
+    while (backward_point > forward_point)
+    {
+        temp_matrix.col(forward_point) += temp_matrix.col(backward_point);
+        temp_matrix.col(backward_point) = temp_matrix.col(forward_point) - temp_matrix.col(backward_point);
+        temp_matrix.col(forward_point) = temp_matrix.col(forward_point) - temp_matrix.col(backward_point);
+        ++forward_point;
+        --backward_point;
+    }
+
+    return;
+}
