@@ -22,7 +22,7 @@ public:
 
     void getInputData(string file_name, vector<MatrixXd*> &input_datas, vector<MatrixXd*> &input_labels);    //get Input data and Input label from geiven file
     double calF1Score(const vector<MatrixXd*> &predict_labels, const vector<MatrixXd*> &true_labels);    //calculate f1 score of the predict labels
-    
+    void realTest(string model_file);    //input from console and output the result predict by the model
 };
 
 #endif
