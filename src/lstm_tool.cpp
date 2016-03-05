@@ -144,3 +144,23 @@ void LSTMTool::reverseMarix(MatrixXd &temp_matrix)
 
     return;
 }
+
+//pointwise multiplication for two matrix
+MatrixXd LSTMTool::pointwiseMult(MatrixXd &matrix_1, MatrixXd &matrix_2)
+{
+    /*
+     * note : the shape of the two matrix must be equal
+     */
+
+    int row_num = matrix_1.rows();
+    int col_num = matrix_2.cols();
+    MatrixXd result(row_num, col_num);
+    for (int i = 0; i < row_num; ++i)
+    {
+        for (int j = 0; j < col_num; ++j)
+        {
+            result(i, j) = matrix_1(i, j) * matrix_2(i, j);
+        }
+    }
+    return result;
+}
