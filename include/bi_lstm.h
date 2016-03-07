@@ -6,7 +6,7 @@
  ************************************************************************/
 
 #ifndef BI_LSTM_H
-#define ASPECT_TOOL_H
+#define BI_LSTM_H
 
 #include<iostream>
 #include"../include/lstm.h"

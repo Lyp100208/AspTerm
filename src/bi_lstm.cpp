@@ -134,6 +134,14 @@ void BiLSTM::stochasticGradientDescent(vector<MatrixXd*> input_datas, vector<Mat
     MatrixXd backward_output_tanh_weights_derivative = MatrixXd::Zero(backward_lstm.getHiddenCellNum(), backward_lstm.getStateCellNum() + 1);
     MatrixXd backward_output_weights_derivative = MatrixXd::Zero(backward_lstm.getOutputNum(), backward_lstm.getHiddenCellNum() + 1);
 
+    for (int iteration_num = 0; iteration_num < 1; ++iteration_num)
+    {
+
+    if (iteration_num == 5)
+    {
+        learning_rate *= 0.1;
+    }
+
     //randomising the order of input datas and labels
     LSTMTool::disturbOrder(input_datas, input_labels);
 
@@ -192,6 +200,7 @@ void BiLSTM::stochasticGradientDescent(vector<MatrixXd*> input_datas, vector<Mat
 
     }    // end 'for' of input_datas
 
+    }    //end 'for' of iteration_num
     return;
 }
 

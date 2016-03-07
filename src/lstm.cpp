@@ -384,6 +384,7 @@ void LSTM::checkGradient()
 
     //calculate derivative with our algorithm
     forwardPass(input_data);
+    calculateSoftMax(output_act);
     backwardPass(label);
     double cal_value = (state_values.row(0) * error_output_tanh.row(0).transpose())(0, 0);
 
@@ -391,9 +392,11 @@ void LSTM::checkGradient()
     double sim_value = 0;
     output_tanh_weights(0, 0) += epsilon;
     forwardPass(input_data);
+    calculateSoftMax(output_act);
     sim_value = calculateError(label);
     output_tanh_weights(0, 0) -= 2 * epsilon;
     forwardPass(input_data);
+    calculateSoftMax(output_act);
     sim_value -= calculateError(label);
     sim_value /= 2 * epsilon;
     
@@ -530,7 +533,7 @@ void LSTM::updateWeightsWithOneSentence(
         output_weights -= output_weights_derivative;
         
         double ave_error = calculateError(now_label_maxtrix) / sequence_length;
-        cout << ave_error << endl;
+        cout << "Ave_error : " << ave_error << endl;
     
     return;
 }
@@ -917,7 +920,7 @@ int LSTM::getOutputNum()
 int main()
 {
     LSTM lstm(100, 80, 120, 3);
-    //lstm.checkGradient();
+    lstm.checkGradient();
     /*
     MatrixXd input_data = MatrixXd::Random(100, 10);
     MatrixXd label = MatrixXd::Zero(3, 10);
@@ -935,5 +938,4 @@ int main()
     lstm.saveModel("__Model2");
     return 0;
 }
-
 */
