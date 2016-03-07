@@ -28,7 +28,6 @@ public:
     static void disturbOrder(vector<MatrixXd*>&, vector<MatrixXd*>&);    //randomising the order of the geiven sequences
     static void randomInitialize(MatrixXd&, double);    //random Initialize geiven matrix
     static void reverseMarix(MatrixXd&);    //reverse the matrix in the row direction
-    static void pointwiseMult(MatrixXd&, MatrixXd&);    //pointwise multiplication for two matrix
 
 };
 
