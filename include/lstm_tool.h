@@ -22,6 +22,7 @@ public:
     
     static double sigmoid(double);    //sigmoid function
     static double tanhX(double);    //tanh function 
+    static void sigmoidforMatrix(MatrixXd&);    //sigmoid function for matrix (coefficient-wise)
     static void tanhXforMatrix(MatrixXd&);    //tanh function for matrix (coefficient-wise)
     static void calculateSoftMax(MatrixXd&);    //calculate softmax values for a vector
     static void disturbOrder(vector<MatrixXd*>&, vector<MatrixXd*>&);    //randomising the order of the geiven sequences

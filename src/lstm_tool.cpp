@@ -45,6 +45,21 @@ double LSTMTool::tanhX(double x)
     return result;
 }
 
+//sigmoid function for matrix (coefficient-wise)
+void LSTMTool::sigmoidforMatrix(MatrixXd &matrix)
+{
+    int row_num = matrix.rows();
+    int col_num = matrix.cols();
+    for (int i = 0; i < row_num; ++i)
+    {
+        for (int j = 0; j < col_num; ++j)
+        {
+            matrix(i, j) = sigmoid(matrix(i, j));
+        }
+    }
+    return;
+}
+
 //tanh function for matrix (coefficient-wise)
 void LSTMTool::tanhXforMatrix(MatrixXd &matrix)
 {
@@ -144,3 +159,4 @@ void LSTMTool::reverseMarix(MatrixXd &temp_matrix)
 
     return;
 }
+
